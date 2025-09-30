@@ -1,103 +1,137 @@
-import Image from "next/image";
+'use client';
+
+import { cn } from '@/lib/utils';
+import { useState } from 'react';
+
+/**
+ *
+ * Game (how it works)
+ *
+ * Board: [7,5,6,5,3,5,7,3,6,7,7,4,2,2,3,7,4,7,5,3,6,7,7,5,7].length
+ *
+ * 1. Start at level 1
+ * 2. should be able to click on tile
+ * 3. when you click on it the game should check if that tile is the death tile
+ * 4. if it is the death tile GAME OVER
+ * 5. if is not go up one level and update the score
+ *
+ * Requirements:
+ *
+ * 1. Print the board [x]
+ * 2. being able to click o any tile of the current row (level) [x]
+ * 3. add some sort click handler to all the tiles -> (to know what tile we clicked) -> handleTileClick() [x]
+ * - The tile location in the curren (level) [x]
+ * - getting the death tile for that (level) [x]
+ * - compare the current tile with the death tile (value) [x]
+ * - if death tile game over [x]
+ * - if is not increase the level [x]
+ * - game over side effects (visual)
+ * - update the score []
+ *
+ *
+ * Process:
+ *
+ * board = [
+ *  { id: 0, value: [{id: 0, value: 0}, {id: 1, value: 1}, {}]}, -> row
+ *  { }
+ * ]
+ *
+ */
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const tiles = [7, 5, 6, 5, 3, 5, 7, 3, 6, 7, 7, 4, 2, 2, 3, 7, 4, 7, 5, 3, 6, 7, 7, 5, 7];
+  const board = tiles.map((length, rowIdx) =>
+    // row
+    ({
+      id: rowIdx,
+      value: Array.from({ length }, (_, colIdx) => ({
+        id: `${rowIdx}-${colIdx}`,
+        value: colIdx,
+        row: rowIdx,
+        length,
+      })),
+    }),
+  );
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // State
+  const [gameOver, setGameOver] = useState(false);
+  const [currentLevel, setCurrentLevel] = useState(0);
+  const [deathTile, setDeathTile] = useState<number[] | null>(null);
+
+  // Functions
+  const handleTileClick = (e: React.MouseEvent) => {
+    if (gameOver) return;
+
+    const btn = (e.target as HTMLElement).closest('button[data-id]') as HTMLElement;
+
+    if (!btn) return;
+
+    const currentTileValue = parseInt(btn.dataset.value as string);
+    const currentRow = parseInt(btn.dataset.row as string);
+    const currentRowLength = parseInt(btn.dataset.rowLen as string);
+    const currentDeathTile = getDeathTile(currentRowLength);
+
+    // compare the current tile with the death tile (value)
+    const isDeathTile = currentDeathTile === currentTileValue; // ->
+
+    console.log(isDeathTile);
+
+    // if death tile game over
+    if (isDeathTile) {
+      console.log([currentRow, currentTileValue]);
+      // Game over
+      setDeathTile([currentRow, currentTileValue]);
+      setGameOver(true);
+      return;
+    }
+
+    // if is not increase the level
+    setCurrentLevel((prevLevel) => prevLevel + 1);
+  };
+
+  const getDeathTile = (rowLen: number) => {
+    // call to server...
+    // return Math.floor(Math.random() * rowLen);
+    return 0;
+  };
+
+  return (
+    <div
+      className="h-full bg-black flex-col-reverse flex overflow-auto gap-4 items-center"
+      onClick={handleTileClick}
+    >
+      {board.map((row, rowIdx) => (
+        // Row
+        <div
+          key={row.id}
+          className={cn(
+            'flex gap-2 min-w-[600px] bg-gray-800 p-4 justify-center items-center rounded-sm',
+            currentLevel === row.id && 'border-[2px] border-green-500',
+            currentLevel === row.id && gameOver && 'border-[2px] border-red-500',
+          )}
+        >
+          {row.value.map((col, colIdx) => {
+            const isDeathCell =
+              deathTile?.length === 2 && deathTile[1] === col.value && deathTile[0] === row.id;
+
+            return (
+              // Cell
+              <div key={col.id} className={cn('aspect-square w-1/7 bg-gray-900 rounded-sm')}>
+                <button
+                  className="size-full cursor-pointer disabled:cursor-not-allowed"
+                  data-id={col.id}
+                  data-row-len={col.length}
+                  data-row={row.id}
+                  data-value={col.value}
+                  disabled={gameOver}
+                >
+                  {gameOver && isDeathCell ? <span className="text-white">You Died</span> : null}
+                </button>
+              </div>
+            );
+          })}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      ))}
     </div>
   );
 }
