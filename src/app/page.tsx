@@ -1,7 +1,8 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { Skull } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  *
@@ -25,7 +26,13 @@ import { useState } from 'react';
  * - compare the current tile with the death tile (value) [x]
  * - if death tile game over [x]
  * - if is not increase the level [x]
- * - game over side effects (visual)
+ * - Visual Side effects:
+ *   - Highlight current level (border) [x]
+ *   - Center current level [x]
+ *   - Highlight clicked tiles [x]
+ *   - Disable non playable rows [x]
+ *   - Add non-playable rows visual feedback (reduce opacity) [x]
+ *   - Add skull icon to death tile (opacity) [x]
  * - update the score []
  *
  *
@@ -57,6 +64,19 @@ export default function Home() {
   const [gameOver, setGameOver] = useState(false);
   const [currentLevel, setCurrentLevel] = useState(0);
   const [deathTile, setDeathTile] = useState<number[] | null>(null);
+  const [clickedTiles, setClickedTiles] = useState<Record<string, boolean>>({});
+
+  // Refs
+  const rowsRef = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Effects
+  // Center current level row
+  useEffect(() => {
+    const el = rowsRef.current[currentLevel];
+    if (!el) return;
+
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [currentLevel]);
 
   // Functions
   const handleTileClick = (e: React.MouseEvent) => {
@@ -67,14 +87,13 @@ export default function Home() {
     if (!btn) return;
 
     const currentTileValue = parseInt(btn.dataset.value as string);
+    const currentTileId = btn.dataset.id as string;
     const currentRow = parseInt(btn.dataset.row as string);
     const currentRowLength = parseInt(btn.dataset.rowLen as string);
     const currentDeathTile = getDeathTile(currentRowLength);
 
     // compare the current tile with the death tile (value)
     const isDeathTile = currentDeathTile === currentTileValue; // ->
-
-    console.log(isDeathTile);
 
     // if death tile game over
     if (isDeathTile) {
@@ -84,6 +103,9 @@ export default function Home() {
       setGameOver(true);
       return;
     }
+
+    // mark current tile as clicked
+    setClickedTiles((prevClickedTiles) => ({ ...prevClickedTiles, [currentTileId]: true }));
 
     // if is not increase the level
     setCurrentLevel((prevLevel) => prevLevel + 1);
@@ -100,32 +122,52 @@ export default function Home() {
       className="h-full bg-black flex-col-reverse flex overflow-auto gap-4 items-center"
       onClick={handleTileClick}
     >
-      {board.map((row, rowIdx) => (
+      {board.map((row) => (
         // Row
         <div
           key={row.id}
+          ref={(el) => {
+            rowsRef.current[row.id] = el;
+          }}
           className={cn(
             'flex gap-2 min-w-[600px] bg-gray-800 p-4 justify-center items-center rounded-sm',
             currentLevel === row.id && 'border-[2px] border-green-500',
-            currentLevel === row.id && gameOver && 'border-[2px] border-red-500',
+            currentLevel === row.id &&
+              gameOver &&
+              deathTile?.length === 2 &&
+              'border-[2px] border-red-500',
+            currentLevel !== row.id && 'opacity-70',
           )}
         >
-          {row.value.map((col, colIdx) => {
+          {row.value.map((col) => {
             const isDeathCell =
               deathTile?.length === 2 && deathTile[1] === col.value && deathTile[0] === row.id;
 
             return (
               // Cell
-              <div key={col.id} className={cn('aspect-square w-1/7 bg-gray-900 rounded-sm')}>
+              <div
+                key={col.id}
+                className={cn(
+                  'aspect-square w-1/7 bg-gray-900 rounded-sm',
+                  gameOver && isDeathCell && 'bg-red-500',
+                  clickedTiles[col.id] && 'bg-green-500',
+                )}
+              >
                 <button
-                  className="size-full cursor-pointer disabled:cursor-not-allowed"
+                  className={cn(
+                    'size-full cursor-pointer disabled:cursor-not-allowed flex justify-center items-center',
+                  )}
                   data-id={col.id}
                   data-row-len={col.length}
                   data-row={row.id}
                   data-value={col.value}
-                  disabled={gameOver}
+                  disabled={gameOver || currentLevel !== row.id}
                 >
-                  {gameOver && isDeathCell ? <span className="text-white">You Died</span> : null}
+                  {gameOver && isDeathCell ? (
+                    <span className="text-white">
+                      <Skull className="size-10" />
+                    </span>
+                  ) : null}
                 </button>
               </div>
             );
